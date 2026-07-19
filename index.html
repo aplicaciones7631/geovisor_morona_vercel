@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geovisor de movilidad en el cantón Morona</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+  <!-- Loading -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">Cargando Geovisor...</div>
+    <div id="loading-detail"></div>
+  </div>
+
+  <!-- Header -->
+  <div id="header">
+    <div class="header-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M2 12h20"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+    </div>
+    <h1>Geovisor de movilidad en el cantón Morona</h1>
+    <span class="header-subtitle">Cantón Morona, Morona Santiago &mdash; Supabase / PostGIS</span>
+    <button id="btn-reportar" class="header-report-btn" title="Crear nuevo reporte">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Reportar
+    </button>
+    <button id="btn-pdf" class="header-report-btn" title="Exportar mapa a PDF">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      PDF
+    </button>
+  </div>
+
+  <!-- Modal Reporte -->
+  <div id="reporte-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <h2>Nuevo Reporte Ciudadano</h2>
+        </div>
+        <button id="modal-close" class="modal-close-btn" title="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="reporte-form" class="modal-body" novalidate>
+        <div class="form-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+          </svg>
+          Ubicacion seleccionada en el mapa
+        </div>
+
+        <div id="coordenadas-display" class="coord-display">
+          <span class="coord-label">Ubicacion:</span>
+          <span id="coord-seleccionada" class="coord-value">Sin seleccionar</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rep-nombre">Nombre *</label>
+            <input type="text" id="rep-nombre" required placeholder="Tu nombre completo">
+          </div>
+          <div class="form-group">
+            <label for="rep-telefono">Telefono</label>
+            <input type="text" id="rep-telefono" placeholder="0991234567">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="rep-categoria">Categoria *</label>
+          <select id="rep-categoria" required>
+            <option value="">Seleccione...</option>
+            <option value="Bache">Bache</option>
+            <option value="Alumbrado">Alumbrado</option>
+            <option value="Basura">Basura</option>
+            <option value="Inundacion">Inundacion</option>
+            <option value="Via en mal estado">Via en mal estado</option>
+            <option value="Arbol caido">Arbol caido</option>
+            <option value="Contaminacion">Contaminacion</option>
+            <option value="Animales sueltos">Animales sueltos</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="rep-descripcion">Descripcion del problema *</label>
+          <textarea id="rep-descripcion" required rows="3" placeholder="Describe el problema con detalle..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rep-direccion">Direccion</label>
+            <input type="text" id="rep-direccion" placeholder="Av. principal y calle secundaria">
+          </div>
+          <div class="form-group">
+            <label for="rep-barrio">Barrio / Parroquia</label>
+            <input type="text" id="rep-barrio" placeholder="Macas, San Juan Bosco...">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="btn-enviar" class="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+            Enviar Reporte
+          </button>
+        </div>
+      </form>
+
+      <div id="reporte-exito" class="modal-body hidden">
+        <div class="exito-content">
+          <div class="exito-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 12l3 3 5-5"/>
+            </svg>
+          </div>
+          <h3>Gracias por tu reporte</h3>
+          <p>Tu reporte fue registrado exitosamente y aparecera en el mapa.<br>La administracion revisara tu solicitud.</p>
+          <p class="exito-cierre">Esta ventana se cerrara automaticamente...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="panel">
+      <div id="panel-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+        <span>Capas</span>
+      </div>
+
+      <div id="panel-basemap">
+        <div class="panel-section-title">Mapa base</div>
+        <div class="basemap-options">
+          <button class="basemap-opt active" data-basemap="osm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+            Mapa
+          </button>
+          <button class="basemap-opt" data-basemap="topo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20L8 8l4 6 4-10 6 16"/></svg>
+            Topografico
+          </button>
+          <button class="basemap-opt" data-basemap="sat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Satelite
+          </button>
+        </div>
+      </div>
+
+      <div id="panel-layers"></div>
+    </div>
+
+    <button id="panel-toggle" title="Mostrar / Ocultar panel">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+
+    <div id="map"></div>
+    <div id="report-banner" class="report-banner hidden">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+      </svg>
+      <span>Haz clic en el mapa para ubicar tu reporte</span>
+      <button id="banner-cancel" class="banner-cancel-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div id="status-bar">
+    <span id="coord-display" class="coord">--</span>
+    <span id="scale-display" class="scale-info"></span>
+    <span id="layer-status"></span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
