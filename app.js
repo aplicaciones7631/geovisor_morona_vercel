@@ -952,3 +952,153 @@ function drawNorthArrow(pdf, cx, cy, size) {
   pdf.setTextColor(30, 58, 95);
   pdf.text('N', cx, cy - s - 2, { align: 'center' });
 }
+
+/* =========================================
+   EXPORTAR REPORTES CIUDADANOS A PDF
+   ========================================= */
+
+document.getElementById('btn-pdf-reportes').addEventListener('click', generateReportesPDF);
+
+async function generateReportesPDF() {
+  const btn = document.getElementById('btn-pdf-reportes');
+  btn.disabled = true;
+  btn.textContent = 'Cargando...';
+
+  try {
+    const r = await fetch(`${API_BASE}?table=reportes_ciudadanos&select=*&limit=5000`);
+    if (!r.ok) throw new Error('Error al obtener reportes');
+    const reportes = await r.json();
+
+    if (!reportes.length) {
+      alert('No hay reportes ciudadanos para generar el PDF.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const pageW = 210;
+    const pageH = 297;
+    const margin = 15;
+    const contentW = pageW - margin * 2;
+
+    pdf.setFillColor(30, 58, 95);
+    pdf.rect(0, 0, pageW, 28, 'F');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.text('Reportes Ciudadanos', margin, 14);
+
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Cantón Morona, Morona Santiago`, margin, 20);
+
+    const now = new Date();
+    const fecha = now.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+    pdf.setFontSize(8);
+    pdf.text(`Generado: ${fecha}`, pageW - margin, 14, { align: 'right' });
+    pdf.text(`Total: ${reportes.length} reporte(s)`, pageW - margin, 20, { align: 'right' });
+
+    const cols = [
+      { key: 'nombre',      label: 'Nombre',         w: 30 },
+      { key: 'categoria',   label: 'Categoría',      w: 28 },
+      { key: 'descripcion', label: 'Descripción',    w: 55 },
+      { key: 'direccion',   label: 'Dirección',      w: 28 },
+      { key: 'barrio_parroquia', label: 'Barrio/Pq.', w: 28 },
+      { key: 'telefono',    label: 'Teléfono',       w: 21 }
+    ];
+
+    const headerH = 8;
+    const rowH = 7;
+    const rowsPerPage = Math.floor((pageH - 50 - headerH) / rowH);
+
+    let y = 36;
+
+    function drawHeader() {
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(margin, y, contentW, headerH, 'F');
+      pdf.setDrawColor(200, 210, 220);
+      pdf.setLineWidth(0.2);
+      pdf.line(margin, y, margin + contentW, y);
+
+      let x = margin + 2;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.setTextColor(30, 58, 95);
+      cols.forEach(col => {
+        pdf.text(col.label, x, y + 5.5);
+        x += col.w;
+      });
+      y += headerH;
+    }
+
+    drawHeader();
+
+    reportes.forEach((rep, i) => {
+      if (y + rowH > pageH - 30) {
+        pdf.addPage();
+        y = 20;
+        drawHeader();
+      }
+
+      if (i % 2 === 0) {
+        pdf.setFillColor(248, 250, 252);
+        pdf.rect(margin, y, contentW, rowH, 'F');
+      }
+
+      let x = margin + 2;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(40, 40, 40);
+
+      cols.forEach(col => {
+        let val = rep[col.key] || '';
+        if (typeof val === 'string' && val.length > 40) val = val.substring(0, 38) + '…';
+        pdf.text(String(val), x, y + 4.5, { maxWidth: col.w - 2 });
+        x += col.w;
+      });
+
+      pdf.setDrawColor(230, 235, 240);
+      pdf.setLineWidth(0.1);
+      pdf.line(margin, y + rowH, margin + contentW, y + rowH);
+
+      y += rowH;
+    });
+
+    const footY = pageH - 15;
+    pdf.setDrawColor(30, 58, 95);
+    pdf.setLineWidth(0.4);
+    pdf.line(margin, footY, pageW - margin, footY);
+
+    pdf.setFontSize(6);
+    pdf.setTextColor(140, 140, 140);
+    pdf.setFont('helvetica', 'italic');
+    pdf.text('Geovisor de movilidad en el cantón Morona — Reportes ciudadanos', margin, footY + 5);
+
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      pdf.setPage(p);
+      pdf.setFontSize(6);
+      pdf.setTextColor(140, 140, 140);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Página ${p} de ${totalPages}`, pageW - margin, footY + 5, { align: 'right' });
+    }
+
+    pdf.save('reportes_ciudadanos_morona.pdf');
+
+  } catch (err) {
+    console.error('Error al generar PDF de reportes:', err);
+    alert('Error al generar el PDF. Intenta de nuevo.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="11" x2="12" y2="17"/>
+        <line x1="9" y1="14" x2="15" y2="14"/>
+      </svg>
+      Reportes PDF`;
+  }
+}
