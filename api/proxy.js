@@ -1,6 +1,6 @@
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -62,6 +62,32 @@ module.exports = async (req, res) => {
       }
 
       return res.status(201).json(data);
+    }
+
+    if (req.method === 'PATCH') {
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Parámetro "id" requerido.' });
+
+      const body = req.body;
+      const url = `${SUPABASE_URL}/${table}?id=eq.${id}`;
+
+      const r = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await r.json();
+      if (!r.ok) {
+        return res.status(r.status).json({ error: data });
+      }
+
+      return res.status(200).json(data);
     }
 
     return res.status(405).json({ error: 'Método no permitido.' });

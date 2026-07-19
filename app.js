@@ -184,6 +184,21 @@ const REPORT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="30" heig
   <circle cx="15" cy="21" r="1.5" fill="#fff"/>
 </svg>`;
 
+function reportIconByStatus(estado) {
+  const s = (estado || 'pendiente').toLowerCase();
+  const colors = {
+    pendiente:  { bg: '#dc2626', border: '#fff' },
+    trabajado:  { bg: '#f59e0b', border: '#fff' },
+    completado: { bg: '#16a34a', border: '#fff' }
+  };
+  const c = colors[s] || colors.pendiente;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+    <circle cx="15" cy="15" r="14" fill="${c.bg}" stroke="${c.border}" stroke-width="1.5"/>
+    <line x1="15" y1="9" x2="15" y2="17" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="15" cy="21" r="1.5" fill="#fff"/>
+  </svg>`;
+}
+
 const VULNERABILITY_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
   <path d="M15 2L1 27h28L15 2z" fill="#facc15" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
   <path d="M15 7L4 25h22L15 7z" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
@@ -339,6 +354,60 @@ function construirPopup(tabla, props, camposConfig, colorCapa) {
   </div>`;
 }
 
+function construirPopupReporte(props, color) {
+  const estado = (props.estado || 'pendiente').toLowerCase();
+  const reportId = props.id;
+  let rows = '';
+  const campos = {
+    'nombre': 'Nombre', 'telefono': 'Telefono', 'categoria': 'Categoria',
+    'descripcion': 'Descripcion', 'direccion': 'Direccion',
+    'barrio_parroquia': 'Barrio/Parroquia', 'created_at': 'Fecha'
+  };
+
+  for (const [campo, label] of Object.entries(campos)) {
+    let val = props[campo];
+    if (val === null || val === undefined || val === '') continue;
+    if (typeof val === 'string') { val = val.trim(); if (val === '') continue; }
+    if (typeof val === 'number') {
+      val = Number.isInteger(val) ? val.toLocaleString('es-EC') : val.toLocaleString('es-EC', { maximumFractionDigits: 2 });
+    }
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+      try { const d = new Date(val); val = d.toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (_) {}
+    }
+    rows += `<tr><td>${label}</td><td>${val}</td></tr>`;
+  }
+
+  return `<div class="popup-content">
+    <div class="popup-header" style="background:${color}"><span class="popup-dot"></span>Reportes Ciudadanos</div>
+    <div class="popup-body">
+      <table>${rows}</table>
+      <div class="popup-status">
+        <label class="popup-status-label">Estado del tramite:</label>
+        <select class="popup-status-select" id="status-${reportId}" onchange="actualizarEstado(${reportId}, this.value)">
+          <option value="pendiente" ${estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+          <option value="trabajado" ${estado === 'trabajado' ? 'selected' : ''}>Trabajado</option>
+          <option value="completado" ${estado === 'completado' ? 'selected' : ''}>Completado</option>
+        </select>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function actualizarEstado(id, nuevoEstado) {
+  try {
+    const r = await fetch(`${API_BASE}?table=reportes_ciudadanos&id=${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: nuevoEstado })
+    });
+    if (!r.ok) throw new Error('Error al actualizar');
+    recargarCapaReportes();
+  } catch (err) {
+    console.error('Error actualizando estado:', err);
+    alert('No se pudo actualizar el estado.');
+  }
+}
+
 /* ---- Cargar capa desde Supabase ---- */
 async function cargarCapa(config) {
   const r = await fetch(`${API_BASE}?table=${config.id}&select=*&limit=5000`);
@@ -405,14 +474,22 @@ async function cargarCapa(config) {
     });
     opts.pointToLayer = (f, ll) => L.marker(ll, { icon: sectorIcon });
   } else if (config.id === 'reportes_ciudadanos') {
-    const reportIcon = L.divIcon({
-      html: REPORT_ICON_SVG,
-      className: 'bus-stop-icon',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-      popupAnchor: [0, -15]
-    });
-    opts.pointToLayer = (f, ll) => L.marker(ll, { icon: reportIcon });
+    opts.pointToLayer = (f, ll) => {
+      const icon = L.divIcon({
+        html: reportIconByStatus(f.properties.estado),
+        className: 'bus-stop-icon',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+      });
+      return L.marker(ll, { icon });
+    };
+    opts.onEachFeature = (f, layer) => {
+      layer.bindPopup(
+        construirPopupReporte(f.properties, config.color),
+        { maxWidth: 320, maxHeight: 350, className: 'custom-popup' }
+      );
+    };
   } else if (config.id === 'vulnerabilidad_vial') {
     const vulnIcon = L.divIcon({
       html: VULNERABILITY_ICON_SVG,
@@ -1001,12 +1078,13 @@ async function generateReportesPDF() {
     pdf.text(`Total: ${reportes.length} reporte(s)`, pageW - margin, 20, { align: 'right' });
 
     const cols = [
-      { key: 'nombre',      label: 'Nombre',         w: 30 },
-      { key: 'categoria',   label: 'Categoría',      w: 28 },
-      { key: 'descripcion', label: 'Descripción',    w: 55 },
-      { key: 'direccion',   label: 'Dirección',      w: 28 },
-      { key: 'barrio_parroquia', label: 'Barrio/Pq.', w: 28 },
-      { key: 'telefono',    label: 'Teléfono',       w: 21 }
+      { key: 'nombre',      label: 'Nombre',         w: 28 },
+      { key: 'categoria',   label: 'Categoría',      w: 25 },
+      { key: 'descripcion', label: 'Descripción',    w: 45 },
+      { key: 'direccion',   label: 'Dirección',      w: 25 },
+      { key: 'barrio_parroquia', label: 'Barrio/Pq.', w: 25 },
+      { key: 'telefono',    label: 'Teléfono',       w: 18 },
+      { key: 'estado',      label: 'Estado',         w: 22 }
     ];
 
     const headerH = 8;
@@ -1055,7 +1133,22 @@ async function generateReportesPDF() {
       cols.forEach(col => {
         let val = rep[col.key] || '';
         if (typeof val === 'string' && val.length > 40) val = val.substring(0, 38) + '…';
-        pdf.text(String(val), x, y + 4.5, { maxWidth: col.w - 2 });
+
+        if (col.key === 'estado') {
+          const s = String(val).toLowerCase();
+          const ec = s === 'completado' ? [22, 163, 74] : s === 'trabajado' ? [245, 158, 11] : [220, 38, 38];
+          const labelEst = String(val).charAt(0).toUpperCase() + String(val).slice(1);
+          pdf.setFillColor(ec[0], ec[1], ec[2]);
+          pdf.roundedRect(x, y + 0.5, col.w - 3, 4.5, 1.5, 1.5, 'F');
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(6);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text(labelEst, x + (col.w - 3) / 2, y + 3.8, { align: 'center' });
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(40, 40, 40);
+        } else {
+          pdf.text(String(val), x, y + 4.5, { maxWidth: col.w - 2 });
+        }
         x += col.w;
       });
 
@@ -1071,10 +1164,26 @@ async function generateReportesPDF() {
     pdf.setLineWidth(0.4);
     pdf.line(margin, footY, pageW - margin, footY);
 
+    const legendItems = [
+      { label: 'Pendiente', color: [220, 38, 38] },
+      { label: 'Trabajado', color: [245, 158, 11] },
+      { label: 'Completado', color: [22, 163, 74] }
+    ];
+    let lx = margin;
+    pdf.setFontSize(6);
+    legendItems.forEach(item => {
+      pdf.setFillColor(item.color[0], item.color[1], item.color[2]);
+      pdf.roundedRect(lx, footY + 2, 3, 2.5, 0.5, 0.5, 'F');
+      pdf.setTextColor(60, 60, 60);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item.label, lx + 4.5, footY + 4);
+      lx += 22;
+    });
+
     pdf.setFontSize(6);
     pdf.setTextColor(140, 140, 140);
     pdf.setFont('helvetica', 'italic');
-    pdf.text('Geovisor de movilidad en el cantón Morona — Reportes ciudadanos', margin, footY + 5);
+    pdf.text('Geovisor de movilidad en el cantón Morona — Reportes ciudadanos', margin, footY + 9);
 
     const totalPages = pdf.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
