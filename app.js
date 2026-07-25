@@ -1010,6 +1010,7 @@ async function generatePDF() {
     pdf.line(m, footTop, pageW - m, footTop);
 
     /* Escala gráfica */
+    const center = map.getCenter();
     const latRad = center.lat * Math.PI / 180;
     const metersPerPx = 156543.03392 * Math.cos(latRad) / Math.pow(2, map.getZoom());
     const containerW = mapEl.offsetWidth;
