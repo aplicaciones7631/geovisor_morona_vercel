@@ -876,8 +876,8 @@ async function generatePDF() {
     /* Calcular altura de la leyenda */
     let legContentH = 12;
     activas.forEach(c => {
-      legContentH += 9;
-      if (c.id === 'reportes_ciudadanos') legContentH += 14;
+      legContentH += 7;
+      if (c.id === 'reportes_ciudadanos') legContentH += 10;
     });
     const legH = Math.min(legContentH, mapAreaH);
 
@@ -905,42 +905,42 @@ async function generatePDF() {
       pdf.line(legX + 3, ly - 4, legX + legW - 3, ly - 4);
 
       const symX = legX + 3;
-      const symW = 8;
-      const symH = 5;
-      const symCenterY = ly - 1.5;
+      const symW = 4;
+      const symH = 2.5;
+      const symCenterY = ly - 1;
 
       if (c.tipo === 'polygon') {
         const fc = hexToRgb(c.fillColor);
         const sc = hexToRgb(c.color);
         pdf.setFillColor(fc.r, fc.g, fc.b);
         pdf.setDrawColor(sc.r, sc.g, sc.b);
-        pdf.setLineWidth(0.3);
+        pdf.setLineWidth(0.2);
         pdf.rect(symX, symCenterY - symH / 2, symW, symH, 'FD');
       } else if (c.tipo === 'line') {
         const lc = hexToRgb(c.color);
         pdf.setDrawColor(lc.r, lc.g, lc.b);
-        pdf.setLineWidth(Math.min(Math.max(c.weight, 1.5), 3));
+        pdf.setLineWidth(Math.min(Math.max(c.weight * 0.5, 0.8), 1.5));
         pdf.line(symX, symCenterY, symX + symW, symCenterY);
       } else if (c.id === 'morona_poblados_2025') {
         pdf.setFillColor(26, 26, 26);
-        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
+        pdf.circle(symX + symW / 2, symCenterY, 1.2, 'F');
         pdf.setFillColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(5);
-        pdf.text('H', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
+        pdf.setFontSize(3.5);
+        pdf.text('H', symX + symW / 2, symCenterY + 0.8, { align: 'center' });
       } else if (c.id === 'morona_pob_sectores_2025') {
         pdf.setFillColor(26, 26, 26);
-        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
+        pdf.circle(symX + symW / 2, symCenterY, 1.2, 'F');
         pdf.setFillColor(255, 152, 0);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(5);
-        pdf.text('S', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
+        pdf.setFontSize(3.5);
+        pdf.text('S', symX + symW / 2, symCenterY + 0.8, { align: 'center' });
       } else if (c.id === 'reportes_ciudadanos') {
         /* Título del grupo */
         pdf.setTextColor(30, 41, 59);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(5.5);
-        pdf.text(c.nombre, symX, symCenterY + 1.5);
+        pdf.setFontSize(5);
+        pdf.text(c.nombre, symX, symCenterY + 1);
 
         /* Sub-items */
         const subItems = [
@@ -948,57 +948,56 @@ async function generatePDF() {
           { label: 'Trabajado', color: [245, 158, 11] },
           { label: 'Completado', color: [22, 163, 74] }
         ];
-        let sy = ly + 4;
+        let sy = ly + 3.5;
         subItems.forEach(si => {
           pdf.setFillColor(si.color[0], si.color[1], si.color[2]);
-          pdf.circle(symX + 3, sy, 1.8, 'F');
+          pdf.circle(symX + 2, sy, 1, 'F');
           pdf.setDrawColor(255, 255, 255);
-          pdf.setLineWidth(0.15);
-          pdf.circle(symX + 3, sy, 1.8, 'S');
+          pdf.setLineWidth(0.1);
+          pdf.circle(symX + 2, sy, 1, 'S');
           pdf.setTextColor(50, 50, 50);
           pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(5.5);
-          pdf.text(si.label, symX + 7, sy + 1.3);
-          sy += 4.5;
+          pdf.setFontSize(5);
+          pdf.text(si.label, symX + 5, sy + 1);
+          sy += 3.5;
         });
       } else if (c.id === 'vulnerabilidad_vial') {
         pdf.setFillColor(250, 204, 21);
         pdf.setDrawColor(26, 26, 26);
-        pdf.setLineWidth(0.2);
-        pdf.triangle(symX + symW / 2, symCenterY - 2.5, symX + 0.5, symCenterY + 2.5, symX + symW - 0.5, symCenterY + 2.5, 'FD');
+        pdf.setLineWidth(0.15);
+        pdf.triangle(symX + symW / 2, symCenterY - 1.5, symX + 0.5, symCenterY + 1.5, symX + symW - 0.5, symCenterY + 1.5, 'FD');
         pdf.setTextColor(26, 26, 26);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(4);
-        pdf.text('!', symX + symW / 2, symCenterY + 1.5, { align: 'center' });
+        pdf.setFontSize(3);
+        pdf.text('!', symX + symW / 2, symCenterY + 1, { align: 'center' });
       } else if (c.id === 'parada_buses') {
         pdf.setFillColor(37, 99, 235);
-        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
+        pdf.circle(symX + symW / 2, symCenterY, 1.2, 'F');
         pdf.setDrawColor(255, 255, 255);
-        pdf.setLineWidth(0.15);
-        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'S');
+        pdf.setLineWidth(0.1);
+        pdf.circle(symX + symW / 2, symCenterY, 1.2, 'S');
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(4);
-        pdf.text('PB', symX + symW / 2, symCenterY + 1.3, { align: 'center' });
+        pdf.setFontSize(3);
+        pdf.text('PB', symX + symW / 2, symCenterY + 0.8, { align: 'center' });
       } else {
         const fc = hexToRgb(c.fillColor);
         const sc = hexToRgb(c.color);
         pdf.setFillColor(fc.r, fc.g, fc.b);
         pdf.setDrawColor(sc.r, sc.g, sc.b);
-        pdf.setLineWidth(0.2);
-        pdf.circle(symX + symW / 2, symCenterY, 2, 'FD');
+        pdf.setLineWidth(0.15);
+        pdf.circle(symX + symW / 2, symCenterY, 1, 'FD');
       }
 
       /* Etiqueta */
       if (c.id !== 'reportes_ciudadanos') {
         pdf.setTextColor(30, 41, 59);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(5.5);
-        const label = c.nombre.length > 20 ? c.nombre.substring(0, 18) + '…' : c.nombre;
-        pdf.text(label, legX + 13, ly + 0.2);
+        pdf.setFontSize(5);
+        pdf.text(c.nombre, legX + 9, ly + 0.2);
       }
 
-      ly += (c.id === 'reportes_ciudadanos') ? 18 : 9;
+      ly += (c.id === 'reportes_ciudadanos') ? 14.5 : 7;
     });
 
     /* ============ PIE DE PÁGINA ============ */
