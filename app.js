@@ -877,7 +877,7 @@ async function generatePDF() {
     let legContentH = 12;
     activas.forEach(c => {
       legContentH += 7;
-      if (c.id === 'reportes_ciudadanos') legContentH += 10;
+      if (c.id === 'reportes_ciudadanos') legContentH += 13;
     });
     const legH = Math.min(legContentH, mapAreaH);
 
@@ -948,7 +948,7 @@ async function generatePDF() {
           { label: 'Trabajado', color: [245, 158, 11] },
           { label: 'Completado', color: [22, 163, 74] }
         ];
-        let sy = ly + 3.5;
+        let sy = ly + 4;
         subItems.forEach(si => {
           pdf.setFillColor(si.color[0], si.color[1], si.color[2]);
           pdf.circle(symX + 2, sy, 1, 'F');
@@ -959,7 +959,7 @@ async function generatePDF() {
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(5);
           pdf.text(si.label, symX + 5, sy + 1);
-          sy += 3.5;
+          sy += 4.5;
         });
       } else if (c.id === 'vulnerabilidad_vial') {
         pdf.setFillColor(250, 204, 21);
@@ -997,7 +997,7 @@ async function generatePDF() {
         pdf.text(c.nombre, legX + 9, ly + 0.2);
       }
 
-      ly += (c.id === 'reportes_ciudadanos') ? 14.5 : 7;
+      ly += (c.id === 'reportes_ciudadanos') ? 17 : 7;
     });
 
     /* ============ PIE DE PÁGINA ============ */
