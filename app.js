@@ -908,7 +908,7 @@ async function generatePDF() {
       const symX = legX + 3;
       const symW = 8;
       const symH = 5;
-      const symCenterY = ly - 1.5;
+      let symCenterY = ly - 1.5;
 
       if (c.tipo === 'polygon') {
         const fc = hexToRgb(c.fillColor);
