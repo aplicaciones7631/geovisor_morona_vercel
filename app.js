@@ -877,7 +877,7 @@ async function generatePDF() {
     let legContentH = 12;
     activas.forEach(c => {
       legContentH += 9;
-      if (c.id === 'reportes_ciudadanos') legContentH += 3.5 * 3;
+      if (c.id === 'reportes_ciudadanos') legContentH += 14;
     });
     const legH = Math.min(legContentH, mapAreaH);
 
@@ -904,11 +904,10 @@ async function generatePDF() {
       pdf.setLineWidth(0.1);
       pdf.line(legX + 3, ly - 4, legX + legW - 3, ly - 4);
 
-      /* Símbolo */
       const symX = legX + 3;
       const symW = 8;
       const symH = 5;
-      let symCenterY = ly - 1.5;
+      const symCenterY = ly - 1.5;
 
       if (c.tipo === 'polygon') {
         const fc = hexToRgb(c.fillColor);
@@ -923,41 +922,46 @@ async function generatePDF() {
         pdf.setLineWidth(Math.min(Math.max(c.weight, 1.5), 3));
         pdf.line(symX, symCenterY, symX + symW, symCenterY);
       } else if (c.id === 'morona_poblados_2025') {
-        /* Casa: círculo negro con ícono blanco */
         pdf.setFillColor(26, 26, 26);
         pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
         pdf.setFillColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(5);
-        pdf.text('⌂', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
+        pdf.text('H', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
       } else if (c.id === 'morona_pob_sectores_2025') {
         pdf.setFillColor(26, 26, 26);
         pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
         pdf.setFillColor(255, 152, 0);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(5);
-        pdf.text('▲', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
+        pdf.text('S', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
       } else if (c.id === 'reportes_ciudadanos') {
-        /* Sub-legend: 3 estados */
-        const estadoColors = [
+        /* Título del grupo */
+        pdf.setTextColor(30, 41, 59);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5.5);
+        pdf.text(c.nombre, symX, symCenterY + 1.5);
+
+        /* Sub-items */
+        const subItems = [
           { label: 'Pendiente', color: [220, 38, 38] },
           { label: 'Trabajado', color: [245, 158, 11] },
           { label: 'Completado', color: [22, 163, 74] }
         ];
-        estadoColors.forEach(e => {
-          pdf.setFillColor(e.color[0], e.color[1], e.color[2]);
-          pdf.circle(symX + 2, symCenterY, 1.8, 'F');
+        let sy = ly + 4;
+        subItems.forEach(si => {
+          pdf.setFillColor(si.color[0], si.color[1], si.color[2]);
+          pdf.circle(symX + 3, sy, 1.8, 'F');
           pdf.setDrawColor(255, 255, 255);
-          pdf.setLineWidth(0.2);
-          pdf.circle(symX + 2, symCenterY, 1.8, 'S');
+          pdf.setLineWidth(0.15);
+          pdf.circle(symX + 3, sy, 1.8, 'S');
           pdf.setTextColor(50, 50, 50);
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(5.5);
-          pdf.text(e.label, symX + 5, symCenterY + 1.3);
-          symCenterY += 4.5;
+          pdf.text(si.label, symX + 7, sy + 1.3);
+          sy += 4.5;
         });
       } else if (c.id === 'vulnerabilidad_vial') {
-        /* Triángulo amarillo */
         pdf.setFillColor(250, 204, 21);
         pdf.setDrawColor(26, 26, 26);
         pdf.setLineWidth(0.2);
@@ -977,7 +981,6 @@ async function generatePDF() {
         pdf.setFontSize(4);
         pdf.text('PB', symX + symW / 2, symCenterY + 1.3, { align: 'center' });
       } else {
-        /* Genérico: circleMarker */
         const fc = hexToRgb(c.fillColor);
         const sc = hexToRgb(c.color);
         pdf.setFillColor(fc.r, fc.g, fc.b);
@@ -987,18 +990,15 @@ async function generatePDF() {
       }
 
       /* Etiqueta */
-      pdf.setTextColor(30, 41, 59);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(5.5);
-      const label = c.nombre.length > 20 ? c.nombre.substring(0, 18) + '…' : c.nombre;
       if (c.id !== 'reportes_ciudadanos') {
-        pdf.text(label, legX + 13, ly + 0.2);
-      } else {
-        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(30, 41, 59);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(5.5);
+        const label = c.nombre.length > 20 ? c.nombre.substring(0, 18) + '…' : c.nombre;
         pdf.text(label, legX + 13, ly + 0.2);
       }
 
-      ly += (c.id === 'reportes_ciudadanos') ? 15 : 9;
+      ly += (c.id === 'reportes_ciudadanos') ? 18 : 9;
     });
 
     /* ============ PIE DE PÁGINA ============ */
