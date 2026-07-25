@@ -877,7 +877,7 @@ async function generatePDF() {
     let legContentH = 12;
     activas.forEach(c => {
       legContentH += 7;
-      if (c.id === 'reportes_ciudadanos') legContentH += 13;
+      if (c.id === 'reportes_ciudadanos') legContentH += 16;
     });
     const legH = Math.min(legContentH, mapAreaH);
 
@@ -992,7 +992,7 @@ async function generatePDF() {
         pdf.text(c.nombre, legX + 9, ly + 0.2);
       }
 
-      ly += (c.id === 'reportes_ciudadanos') ? 17 : 7;
+      ly += (c.id === 'reportes_ciudadanos') ? 20 : 7;
 
       if (idx < activas.length - 1) {
         pdf.setDrawColor(230, 235, 240);
