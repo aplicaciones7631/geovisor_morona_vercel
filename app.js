@@ -794,43 +794,47 @@ async function generatePDF() {
 
     const pageW = 297;
     const pageH = 210;
-    const margin = 12;
-    const headerH = 22;
-    const footerH = 14;
+    const m = 10;
+    const borderX = 6;
+    const borderY = 6;
+    const innerW = pageW - borderX * 2;
+    const innerH = pageH - borderY * 2;
 
-    /* ---- Fondo y borde ---- */
-    pdf.setFillColor(255, 255, 255);
+    /* ============ FONDO ============ */
+    pdf.setFillColor(248, 250, 252);
     pdf.rect(0, 0, pageW, pageH, 'F');
-    pdf.setDrawColor(30, 58, 95);
-    pdf.setLineWidth(0.8);
-    pdf.rect(4, 4, pageW - 8, pageH - 8);
 
-    /* ---- Header ---- */
+    /* Borde exterior */
+    pdf.setDrawColor(30, 58, 95);
+    pdf.setLineWidth(1);
+    pdf.rect(borderX, borderY, innerW, innerH);
+
+    /* Borde interior */
+    pdf.setDrawColor(30, 58, 95);
+    pdf.setLineWidth(0.3);
+    pdf.rect(borderX + 2, borderY + 2, innerW - 4, innerH - 4);
+
+    /* ============ TÍTULO (centrado arriba) ============ */
+    const titleY = borderY + 6;
     pdf.setFillColor(30, 58, 95);
-    pdf.rect(4, 4, pageW - 8, headerH, 'F');
+    pdf.rect(borderX + 4, titleY, innerW - 8, 12, 'F');
 
     pdf.setTextColor(255, 255, 255);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.text('Geovisor de movilidad en el cantón Morona', margin, 17);
+    pdf.setFontSize(13);
+    pdf.text('GEOVISOR DE MOVILIDAD EN EL CANTÓN MORONA', pageW / 2, titleY + 5.5, { align: 'center' });
 
-    pdf.setFontSize(9);
+    pdf.setFontSize(7);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Cantón Morona, Morona Santiago — Supabase / PostGIS', margin, 23);
+    pdf.text('Cantón Morona, Morona Santiago — Datos: Supabase / PostGIS', pageW / 2, titleY + 9.5, { align: 'center' });
 
-    const now = new Date();
-    const fecha = now.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
-    pdf.setFontSize(8);
-    pdf.text(`Fecha: ${fecha}`, pageW - margin - 30, 17);
-
-    const center = map.getCenter();
-    pdf.text(`Centro: ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, pageW - margin - 30, 22);
-
-    /* ---- Mapa ---- */
-    const mapTop = headerH + 8;
-    const legendW = 58;
-    const mapAreaW = pageW - margin * 2 - legendW - 4;
-    const mapAreaH = pageH - headerH - footerH - 14;
+    /* ============ MAPA ============ */
+    const mapTop = titleY + 15;
+    const legendW = 54;
+    const gap = 4;
+    const mapAreaW = pageW - m * 2 - legendW - gap;
+    const mapBottom = pageH - 32;
+    const mapAreaH = mapBottom - mapTop;
     const imgRatio = canvas.width / canvas.height;
     let imgW = mapAreaW;
     let imgH = imgW / imgRatio;
@@ -838,36 +842,52 @@ async function generatePDF() {
       imgH = mapAreaH;
       imgW = imgH * imgRatio;
     }
-    const imgX = margin;
+    const imgX = m;
     const imgY = mapTop;
 
-    pdf.setDrawColor(180, 180, 180);
-    pdf.setLineWidth(0.3);
-    pdf.rect(imgX, imgY, imgW, imgH);
+    /* Sombra del mapa */
+    pdf.setFillColor(200, 205, 215);
+    pdf.rect(imgX + 1.5, imgY + 1.5, imgW, imgH, 'F');
 
+    /* Borde del mapa */
+    pdf.setDrawColor(30, 58, 95);
+    pdf.setLineWidth(0.5);
+    pdf.rect(imgX, imgY, imgW, imgH, 'S');
+
+    /* Imagen del mapa */
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     pdf.addImage(imgData, 'JPEG', imgX, imgY, imgW, imgH);
 
-    /* ---- Leyenda ---- */
-    const legX = imgX + imgW + 6;
+    /* ============ FLECHA NORTE (sobre el mapa, esquina superior izq) ============ */
+    const naX = imgX + 10;
+    const naY = imgY + 10;
+    drawNorthArrow(pdf, naX, naY, 8);
+
+    /* ============ LEYENDA ============ */
+    const legX = imgX + imgW + gap;
     const legY = imgY;
     const legW = legendW;
-
-    pdf.setFillColor(255, 255, 255);
-    pdf.setDrawColor(30, 58, 95);
-    pdf.setLineWidth(0.4);
 
     const activas = CAPAS.filter(c => {
       const cb = document.getElementById(`cb_${c.id}`);
       return cb && cb.checked && capas[c.id];
     });
 
-    let legContentH = 16;
-    activas.forEach(() => { legContentH += 10; });
+    /* Calcular altura de la leyenda */
+    let legContentH = 12;
+    activas.forEach(c => {
+      legContentH += 9;
+      if (c.id === 'reportes_ciudadanos') legContentH += 3.5 * 3;
+    });
     const legH = Math.min(legContentH, mapAreaH);
 
+    /* Fondo de leyenda */
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(30, 58, 95);
+    pdf.setLineWidth(0.4);
     pdf.rect(legX, legY, legW, legH, 'FD');
 
+    /* Título de leyenda */
     pdf.setFillColor(30, 58, 95);
     pdf.rect(legX, legY, legW, 9, 'F');
     pdf.setTextColor(255, 255, 255);
@@ -875,13 +895,20 @@ async function generatePDF() {
     pdf.setFontSize(7);
     pdf.text('LEYENDA', legX + legW / 2, legY + 6, { align: 'center' });
 
-    let ly = legY + 14;
+    let ly = legY + 13;
     activas.forEach(c => {
       if (ly > legY + legH - 4) return;
 
-      pdf.setDrawColor(180, 180, 180);
-      pdf.setLineWidth(0.15);
-      pdf.line(legX + 2, ly - 3, legX + legW - 2, ly - 3);
+      /* Separador */
+      pdf.setDrawColor(230, 235, 240);
+      pdf.setLineWidth(0.1);
+      pdf.line(legX + 3, ly - 4, legX + legW - 3, ly - 4);
+
+      /* Símbolo */
+      const symX = legX + 3;
+      const symW = 8;
+      const symH = 5;
+      const symCenterY = ly - 1.5;
 
       if (c.tipo === 'polygon') {
         const fc = hexToRgb(c.fillColor);
@@ -889,66 +916,133 @@ async function generatePDF() {
         pdf.setFillColor(fc.r, fc.g, fc.b);
         pdf.setDrawColor(sc.r, sc.g, sc.b);
         pdf.setLineWidth(0.3);
-        pdf.rect(legX + 3, ly - 3.5, 5, 3.5, 'FD');
+        pdf.rect(symX, symCenterY - symH / 2, symW, symH, 'FD');
       } else if (c.tipo === 'line') {
         const lc = hexToRgb(c.color);
         pdf.setDrawColor(lc.r, lc.g, lc.b);
-        pdf.setLineWidth(c.weight > 2 ? 0.8 : 0.5);
-        pdf.line(legX + 3, ly - 1.8, legX + 8, ly - 1.8);
+        pdf.setLineWidth(Math.min(Math.max(c.weight, 1.5), 3));
+        pdf.line(symX, symCenterY, symX + symW, symCenterY);
+      } else if (c.id === 'morona_poblados_2025') {
+        /* Casa: círculo negro con ícono blanco */
+        pdf.setFillColor(26, 26, 26);
+        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
+        pdf.setFillColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5);
+        pdf.text('⌂', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
+      } else if (c.id === 'morona_pob_sectores_2025') {
+        pdf.setFillColor(26, 26, 26);
+        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
+        pdf.setFillColor(255, 152, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5);
+        pdf.text('▲', symX + symW / 2, symCenterY + 1.2, { align: 'center' });
+      } else if (c.id === 'reportes_ciudadanos') {
+        /* Sub-legend: 3 estados */
+        const estadoColors = [
+          { label: 'Pendiente', color: [220, 38, 38] },
+          { label: 'Trabajado', color: [245, 158, 11] },
+          { label: 'Completado', color: [22, 163, 74] }
+        ];
+        estadoColors.forEach(e => {
+          pdf.setFillColor(e.color[0], e.color[1], e.color[2]);
+          pdf.circle(symX + 2, symCenterY, 1.8, 'F');
+          pdf.setDrawColor(255, 255, 255);
+          pdf.setLineWidth(0.2);
+          pdf.circle(symX + 2, symCenterY, 1.8, 'S');
+          pdf.setTextColor(50, 50, 50);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(5.5);
+          pdf.text(e.label, symX + 5, symCenterY + 1.3);
+          symCenterY += 4.5;
+        });
+      } else if (c.id === 'vulnerabilidad_vial') {
+        /* Triángulo amarillo */
+        pdf.setFillColor(250, 204, 21);
+        pdf.setDrawColor(26, 26, 26);
+        pdf.setLineWidth(0.2);
+        pdf.triangle(symX + symW / 2, symCenterY - 2.5, symX + 0.5, symCenterY + 2.5, symX + symW - 0.5, symCenterY + 2.5, 'FD');
+        pdf.setTextColor(26, 26, 26);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(4);
+        pdf.text('!', symX + symW / 2, symCenterY + 1.5, { align: 'center' });
+      } else if (c.id === 'parada_buses') {
+        pdf.setFillColor(37, 99, 235);
+        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'F');
+        pdf.setDrawColor(255, 255, 255);
+        pdf.setLineWidth(0.15);
+        pdf.circle(symX + symW / 2, symCenterY, 2.5, 'S');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(4);
+        pdf.text('PB', symX + symW / 2, symCenterY + 1.3, { align: 'center' });
       } else {
+        /* Genérico: circleMarker */
         const fc = hexToRgb(c.fillColor);
         const sc = hexToRgb(c.color);
         pdf.setFillColor(fc.r, fc.g, fc.b);
         pdf.setDrawColor(sc.r, sc.g, sc.b);
-        pdf.setLineWidth(0.3);
-        pdf.circle(legX + 5.5, ly - 1.8, 2, 'FD');
+        pdf.setLineWidth(0.2);
+        pdf.circle(symX + symW / 2, symCenterY, 2, 'FD');
       }
 
+      /* Etiqueta */
       pdf.setTextColor(30, 41, 59);
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(6);
-      const label = c.nombre.length > 22 ? c.nombre.substring(0, 20) + '…' : c.nombre;
-      pdf.text(label, legX + 11, ly - 0.8);
+      pdf.setFontSize(5.5);
+      const label = c.nombre.length > 20 ? c.nombre.substring(0, 18) + '…' : c.nombre;
+      if (c.id !== 'reportes_ciudadanos') {
+        pdf.text(label, legX + 13, ly + 0.2);
+      } else {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(label, legX + 13, ly + 0.2);
+      }
 
-      ly += 10;
+      ly += (c.id === 'reportes_ciudadanos') ? 15 : 9;
     });
 
-    /* ---- Footer ---- */
-    const footY = pageH - footerH - 2;
+    /* ============ PIE DE PÁGINA ============ */
+    const footTop = mapBottom + 3;
+
+    /* Línea separadora */
     pdf.setDrawColor(30, 58, 95);
     pdf.setLineWidth(0.4);
-    pdf.line(margin, footY, pageW - margin, footY);
+    pdf.line(m, footTop, pageW - m, footTop);
 
-    /* Escala gráfica — calculada del estado real del mapa */
+    /* Escala gráfica */
     const latRad = center.lat * Math.PI / 180;
     const metersPerPx = 156543.03392 * Math.cos(latRad) / Math.pow(2, map.getZoom());
     const containerW = mapEl.offsetWidth;
-    const barLenMm = 40;
+    const barLenMm = 38;
     const barRealM = metersPerPx * (containerW / imgW) * barLenMm;
 
     let barLabel;
-    let barUnit;
     if (barRealM >= 1000) {
       barLabel = Math.round(barRealM / 1000);
-      barUnit = 'km';
     } else {
       barLabel = Math.round(barRealM / 100);
-      barUnit = '000 m';
     }
-    const barReal = barUnit === 'km' ? barLabel * 1000 : barLabel * 100;
+    const barReal = barLabel >= 1 ? barLabel * 1000 : barLabel * 100;
 
     const scaleDenom = Math.round(metersPerPx * (containerW / imgW) * 1000);
-    const scaleText = `1 : ${scaleDenom.toLocaleString('es')}`;
+    const scaleText = `Escala: 1 : ${scaleDenom.toLocaleString('es')}`;
 
+    /* Fondo del pie */
+    pdf.setFillColor(241, 245, 249);
+    pdf.rect(m, footTop + 1, pageW - m * 2, 18, 'F');
+    pdf.setDrawColor(200, 210, 220);
+    pdf.setLineWidth(0.2);
+    pdf.rect(m, footTop + 1, pageW - m * 2, 18);
+
+    /* Escala numérica */
     pdf.setFontSize(7);
-    pdf.setTextColor(80, 80, 80);
+    pdf.setTextColor(30, 58, 95);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Escala:', margin, footY + 5);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(scaleText, margin + 14, footY + 5);
+    pdf.text(scaleText, m + 3, footTop + 6);
 
-    const sx = margin;
-    const sy = footY + 8;
+    /* Barra gráfica */
+    const sx = m + 3;
+    const sy = footTop + 8;
     const segs = 4;
     const segW = barLenMm / segs;
     const segReal = barReal / segs;
@@ -961,26 +1055,31 @@ async function generatePDF() {
     pdf.setLineWidth(0.2);
     pdf.rect(sx, sy, barLenMm, 2);
 
-    pdf.setFontSize(5.5);
+    pdf.setFontSize(5);
     pdf.setTextColor(30, 41, 59);
+    pdf.setFont('helvetica', 'normal');
     for (let i = 0; i <= segs; i++) {
       const val = segReal * i;
       const txt = val >= 1000 ? (val / 1000).toFixed(barReal >= 5000 ? 0 : 1) + ' km' : Math.round(val) + ' m';
       pdf.text(txt, sx + i * segW, sy + 5, { align: i === 0 ? 'left' : i === segs ? 'right' : 'center' });
     }
 
-    /* Rosa de los vientos / Norte */
-    const nx = pageW - margin - 14;
-    const ny = footY - 1;
-    drawNorthArrow(pdf, nx, ny, 10);
+    /* Norte (footer) */
+    const naFootX = pageW - m - 20;
+    const naFootY = footTop + 12;
+    drawNorthArrow(pdf, naFootX, naFootY, 7);
 
-    /* Fuentes / Créditos */
-    pdf.setFontSize(5.5);
-    pdf.setTextColor(140, 140, 140);
-    pdf.setFont('helvetica', 'italic');
+    /* Créditos */
+    const now = new Date();
+    const fecha = now.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+    const hora = now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
     const basemapName = document.querySelector('.basemap-opt.active')?.textContent?.trim() || 'Mapa';
-    pdf.text(`Mapa base: ${basemapName} | Datos: Supabase/PostGIS | Generado: ${fecha}`, margin, footY + 12);
+    pdf.setFontSize(5);
+    pdf.setTextColor(120, 130, 140);
+    pdf.setFont('helvetica', 'italic');
+    pdf.text(`Mapa base: ${basemapName} | Fecha: ${fecha} ${hora} | Coord. centro: ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, m + 3, footTop + 17);
 
+    /* ============ GUARDAR ============ */
     pdf.save('geovisor_movilidad_morona.pdf');
 
   } catch (err) {
@@ -1010,24 +1109,35 @@ function hexToRgb(hex) {
 
 function drawNorthArrow(pdf, cx, cy, size) {
   const s = size;
-  pdf.setFillColor(30, 58, 95);
-  pdf.setDrawColor(30, 58, 95);
 
-  pdf.triangle(cx, cy - s, cx - s * 0.35, cy + s * 0.1, cx + s * 0.35, cy + s * 0.1, 'F');
-
+  /* Fondo blanco circular */
   pdf.setFillColor(255, 255, 255);
-  pdf.triangle(cx, cy - s * 0.1, cx - s * 0.35, cy + s * 0.1, cx + s * 0.35, cy + s * 0.1, 'F');
-
   pdf.setDrawColor(30, 58, 95);
   pdf.setLineWidth(0.3);
-  pdf.line(cx, cy - s, cx - s * 0.35, cy + s * 0.1);
-  pdf.line(cx, cy - s, cx + s * 0.35, cy + s * 0.1);
-  pdf.line(cx - s * 0.35, cy + s * 0.1, cx + s * 0.35, cy + s * 0.1);
+  pdf.circle(cx, cy, s + 1.5, 'FD');
 
+  /* Flecha norte (rellena) */
+  pdf.setFillColor(30, 58, 95);
+  pdf.triangle(cx, cy - s, cx - s * 0.3, cy + s * 0.05, cx + s * 0.3, cy + s * 0.05, 'F');
+
+  /* Flecha sur (blanca) */
+  pdf.setFillColor(255, 255, 255);
+  pdf.triangle(cx, cy + s * 0.3, cx - s * 0.3, cy + s * 0.05, cx + s * 0.3, cy + s * 0.05, 'F');
+
+  /* Borde */
+  pdf.setDrawColor(30, 58, 95);
+  pdf.setLineWidth(0.2);
+  pdf.line(cx, cy - s, cx - s * 0.3, cy + s * 0.05);
+  pdf.line(cx, cy - s, cx + s * 0.3, cy + s * 0.05);
+  pdf.line(cx - s * 0.3, cy + s * 0.05, cx + s * 0.3, cy + s * 0.05);
+  pdf.line(cx, cy + s * 0.3, cx - s * 0.3, cy + s * 0.05);
+  pdf.line(cx, cy + s * 0.3, cx + s * 0.3, cy + s * 0.05);
+
+  /* Letra N */
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(7);
+  pdf.setFontSize(Math.max(6, s * 0.7));
   pdf.setTextColor(30, 58, 95);
-  pdf.text('N', cx, cy - s - 2, { align: 'center' });
+  pdf.text('N', cx, cy - s - 2.5, { align: 'center' });
 }
 
 /* =========================================
