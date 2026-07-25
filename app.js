@@ -896,13 +896,8 @@ async function generatePDF() {
     pdf.text('LEYENDA', legX + legW / 2, legY + 6, { align: 'center' });
 
     let ly = legY + 13;
-    activas.forEach(c => {
+    activas.forEach((c, idx) => {
       if (ly > legY + legH - 4) return;
-
-      /* Separador */
-      pdf.setDrawColor(230, 235, 240);
-      pdf.setLineWidth(0.1);
-      pdf.line(legX + 3, ly - 4, legX + legW - 3, ly - 4);
 
       const symX = legX + 3;
       const symW = 4;
@@ -998,6 +993,12 @@ async function generatePDF() {
       }
 
       ly += (c.id === 'reportes_ciudadanos') ? 17 : 7;
+
+      if (idx < activas.length - 1) {
+        pdf.setDrawColor(230, 235, 240);
+        pdf.setLineWidth(0.1);
+        pdf.line(legX + 3, ly - 1, legX + legW - 3, ly - 1);
+      }
     });
 
     /* ============ PIE DE PÁGINA ============ */
