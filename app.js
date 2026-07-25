@@ -902,7 +902,7 @@ async function generatePDF() {
       const symX = legX + 3;
       const symW = 4;
       const symH = 2.5;
-      const symCenterY = ly - 1;
+      const symCenterY = ly + 3;
 
       if (c.tipo === 'polygon') {
         const fc = hexToRgb(c.fillColor);
@@ -935,7 +935,7 @@ async function generatePDF() {
         pdf.setTextColor(30, 41, 59);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(5);
-        pdf.text(c.nombre, symX, symCenterY + 1);
+        pdf.text(c.nombre, symX, ly + 3.5);
 
         /* Sub-items */
         const subItems = [
@@ -943,7 +943,7 @@ async function generatePDF() {
           { label: 'Trabajado', color: [245, 158, 11] },
           { label: 'Completado', color: [22, 163, 74] }
         ];
-        let sy = ly + 4;
+        let sy = ly + 7;
         subItems.forEach(si => {
           pdf.setFillColor(si.color[0], si.color[1], si.color[2]);
           pdf.circle(symX + 2, sy, 1, 'F');
@@ -953,7 +953,7 @@ async function generatePDF() {
           pdf.setTextColor(50, 50, 50);
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(5);
-          pdf.text(si.label, symX + 5, sy + 1);
+          pdf.text(si.label, symX + 5, sy + 1.2);
           sy += 4.5;
         });
       } else if (c.id === 'vulnerabilidad_vial') {
@@ -989,7 +989,7 @@ async function generatePDF() {
         pdf.setTextColor(30, 41, 59);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(5);
-        pdf.text(c.nombre, legX + 9, ly + 0.2);
+        pdf.text(c.nombre, legX + 9, symCenterY + 1.2);
       }
 
       ly += (c.id === 'reportes_ciudadanos') ? 20 : 7;
