@@ -131,6 +131,7 @@ basemaps.osm.addTo(map);
 /* ---- Controles ---- */
 let capas = {};
 let contadores = {};
+let textLabels = {};
 
 /* ---- Eventos del mapa ---- */
 map.on('mousemove', e => {
@@ -281,6 +282,13 @@ function buildUI() {
             <span class="layer-count-badge" id="lc_${c.id}"></span>
           </div>
         </div>`;
+      if (c.id === 'vulnerabilidad_vial') {
+        html += `
+        <div class="layer-sub-item">
+          <input type="checkbox" id="cb_vuln_text" checked>
+          <span class="layer-sub-label">Mostrar nombre en mapa</span>
+        </div>`;
+      }
     });
     html += `</div></div>`;
   }
@@ -295,6 +303,14 @@ function buildUI() {
     document.getElementById(`cb_${c.id}`).addEventListener('change', function () {
       if (capas[c.id]) {
         this.checked ? capas[c.id].addTo(map) : map.removeLayer(capas[c.id]);
+      }
+      if (c.id === 'vulnerabilidad_vial' && textLabels.vulnerabilidad_vial) {
+        const cbText = document.getElementById('cb_vuln_text');
+        if (this.checked && cbText && cbText.checked) {
+          textLabels.vulnerabilidad_vial.addTo(map);
+        } else {
+          map.removeLayer(textLabels.vulnerabilidad_vial);
+        }
       }
     });
   });
@@ -526,6 +542,36 @@ function zoomToLayer(id) {
   }
 }
 
+/* ---- Text labels para vulnerabilidad vial ---- */
+function crearTextLabelsVulnerabilidad(capa) {
+  const labels = [];
+  capa.eachLayer(layer => {
+    const props = layer.feature?.properties;
+    if (props?.nombre) {
+      const ll = layer.getLatLng ? layer.getLatLng() : null;
+      if (ll) {
+        const icon = L.divIcon({
+          html: `<div class="vuln-text-label">${props.nombre}</div>`,
+          className: '',
+          iconSize: null,
+          iconAnchor: [0, -12]
+        });
+        labels.push(L.marker(ll, { icon, interactive: false }));
+      }
+    }
+  });
+  textLabels.vulnerabilidad_vial = L.layerGroup(labels);
+  textLabels.vulnerabilidad_vial.addTo(map);
+
+  const cb = document.getElementById('cb_vuln_text');
+  if (cb) {
+    cb.addEventListener('change', function () {
+      this.checked ? textLabels.vulnerabilidad_vial.addTo(map)
+        : map.removeLayer(textLabels.vulnerabilidad_vial);
+    });
+  }
+}
+
 /* ---- Cargar todas las capas ---- */
 async function cargarTodas() {
   buildUI();
@@ -544,6 +590,9 @@ async function cargarTodas() {
         const lc = document.getElementById(`lc_${c.id}`);
         if (lc) lc.textContent = `${contadores[c.id]}`;
         cargadas++;
+        if (c.id === 'vulnerabilidad_vial') {
+          crearTextLabelsVulnerabilidad(capa);
+        }
       }
     } catch (e) {
       console.error(e);

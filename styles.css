@@ -320,6 +320,40 @@ body {
   border-color: var(--border-light);
 }
 
+.layer-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 48px;
+}
+
+.layer-sub-item input[type=checkbox] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.layer-sub-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vuln-text-label {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid #888;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 10px;
+  font-family: Arial, sans-serif;
+  color: #222;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .layer-item input[type=checkbox] {
   width: 14px;
   height: 14px;
