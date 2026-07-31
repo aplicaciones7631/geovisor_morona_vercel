@@ -545,7 +545,7 @@ async function cargarCapa(config) {
           permanent: true,
           direction: 'top',
           offset: [0, -18],
-          className: 'layer-tooltip'
+          className: 'layer-tooltip vuln-tooltip'
         });
       }
       return m;
@@ -638,16 +638,23 @@ function controlarVisibilidadZoom() {
       });
     }
 
-    /* Nombres de vulnerabilidad vial: zoom + checkbox */
+    /* Nombres de vulnerabilidad vial: zoom + checkbox, texto escala con zoom */
     if (id === 'vulnerabilidad_vial') {
       const cbText = document.getElementById('cb_vuln_text');
       const layerVisible = map.hasLayer(capa);
       const showLabels = z >= LABEL_ZOOM && cbText && cbText.checked && layerVisible;
       capa.eachLayer(l => {
         const nombre = l.feature?.properties?.nombre;
-        if (showLabels && nombre && !l.isTooltipOpen()) {
-          l.bindTooltip(nombre, { permanent: true, direction: 'top', offset: [0, -18], className: 'layer-tooltip' });
-          l.openTooltip();
+        if (showLabels && nombre) {
+          if (!l.isTooltipOpen()) {
+            l.bindTooltip(nombre, { permanent: true, direction: 'top', offset: [0, -18], className: 'layer-tooltip vuln-tooltip' });
+            l.openTooltip();
+          }
+          const fontSize = Math.round((7 + (z - 10) * 1.5) * 10) / 10;
+          const tt = l.getTooltip();
+          if (tt && tt.getElement()) {
+            tt.getElement().style.setProperty('--vuln-font-size', fontSize + 'px');
+          }
         } else if (!showLabels) {
           l.unbindTooltip();
         }

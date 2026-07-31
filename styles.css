@@ -611,6 +611,10 @@ body {
   display: none !important;
 }
 
+.layer-tooltip.vuln-tooltip {
+  font-size: var(--vuln-font-size, 11px) !important;
+}
+
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius) !important;
   padding: 0 !important;
