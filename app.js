@@ -324,13 +324,10 @@ function buildUI() {
       if (capas[c.id]) {
         if (this.checked) {
           capas[c.id].addTo(map);
-          controlarVisibilidadZoom();
         } else {
           map.removeLayer(capas[c.id]);
-          if (c.id === 'vulnerabilidad_vial' && textLabels.vulnerabilidad_vial) {
-            map.removeLayer(textLabels.vulnerabilidad_vial);
-          }
         }
+        controlarVisibilidadZoom();
       }
     });
   });
@@ -585,10 +582,7 @@ function crearTextLabelsVulnerabilidad(capa) {
 
   const cb = document.getElementById('cb_vuln_text');
   if (cb) {
-    cb.addEventListener('change', function () {
-      if (this.checked) { controlarVisibilidadZoom(); }
-      else { map.removeLayer(textLabels.vulnerabilidad_vial); }
-    });
+    cb.addEventListener('change', function () { controlarVisibilidadZoom(); });
   }
 }
 
@@ -631,10 +625,12 @@ function controlarVisibilidadZoom() {
 
   for (const [id, capa] of Object.entries(capas)) {
     const minZoom = ZOOM_THRESHOLDS[id] || 0;
+    const cb = document.getElementById(`cb_${id}`);
+    const userWants = cb ? cb.checked : true;
     const visible = map.hasLayer(capa);
-    if (z >= minZoom && !visible) {
+    if (z >= minZoom && !visible && userWants) {
       capa.addTo(map);
-    } else if (z < minZoom && visible) {
+    } else if ((z < minZoom || !userWants) && visible) {
       map.removeLayer(capa);
     }
 
@@ -655,13 +651,15 @@ function controlarVisibilidadZoom() {
     }
   }
 
-  /* Etiquetas de vulnerabilidad solo a alto zoom */
+  /* Etiquetas de vulnerabilidad solo si la capa principal esta visible */
   if (textLabels.vulnerabilidad_vial) {
     const cbText = document.getElementById('cb_vuln_text');
+    const mainOn = map.hasLayer(capas.vulnerabilidad_vial);
     const layerOn = map.hasLayer(textLabels.vulnerabilidad_vial);
-    if (z >= LABEL_ZOOM && cbText && cbText.checked && !layerOn) {
+    const debeMostrar = z >= LABEL_ZOOM && cbText && cbText.checked && mainOn;
+    if (debeMostrar && !layerOn) {
       textLabels.vulnerabilidad_vial.addTo(map);
-    } else if (z < LABEL_ZOOM && layerOn) {
+    } else if (!debeMostrar && layerOn) {
       map.removeLayer(textLabels.vulnerabilidad_vial);
     }
   }
