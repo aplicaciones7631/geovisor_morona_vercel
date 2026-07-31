@@ -131,7 +131,6 @@ basemaps.osm.addTo(map);
 /* ---- Controles ---- */
 let capas = {};
 let contadores = {};
-let textLabels = {};
 
 const ZOOM_THRESHOLDS = {
   morona_canton_2025: 8,
@@ -151,7 +150,7 @@ const ZOOM_THRESHOLDS = {
 };
 
 const TOOLTIP_ZOOM = 13;
-const LABEL_ZOOM = 13;
+const LABEL_ZOOM = 11;
 
 /* ---- Eventos del mapa ---- */
 map.on('mousemove', e => {
@@ -333,6 +332,11 @@ function buildUI() {
       }
     });
   });
+
+  const cbVulnText = document.getElementById('cb_vuln_text');
+  if (cbVulnText) {
+    cbVulnText.addEventListener('change', function () { controlarVisibilidadZoom(); });
+  }
 }
 
 function resizeGroup(header) {
@@ -533,7 +537,19 @@ async function cargarCapa(config) {
       iconAnchor: [15, 15],
       popupAnchor: [0, -15]
     });
-    opts.pointToLayer = (f, ll) => L.marker(ll, { icon: vulnIcon });
+    opts.pointToLayer = (f, ll) => {
+      const m = L.marker(ll, { icon: vulnIcon });
+      const nombre = f.properties?.nombre;
+      if (nombre) {
+        m.bindTooltip(nombre, {
+          permanent: true,
+          direction: 'top',
+          offset: [0, -18],
+          className: 'layer-tooltip'
+        });
+      }
+      return m;
+    };
   } else if (config.id === 'parada_buses') {
     const busIcon = L.divIcon({
       html: BUS_ICON_SVG,
@@ -561,33 +577,6 @@ function zoomToLayer(id) {
   }
 }
 
-/* ---- Text labels para vulnerabilidad vial ---- */
-function crearTextLabelsVulnerabilidad(capa) {
-  const labels = [];
-  capa.eachLayer(layer => {
-    const props = layer.feature?.properties;
-    if (props?.nombre) {
-      const ll = layer.getLatLng ? layer.getLatLng() : null;
-      if (ll) {
-        const icon = L.divIcon({
-          html: `<div class="vuln-text-label">${props.nombre}</div>`,
-          className: '',
-          iconSize: null,
-          iconAnchor: [0, -12]
-        });
-        labels.push(L.marker(ll, { icon, interactive: false }));
-      }
-    }
-  });
-  textLabels.vulnerabilidad_vial = L.layerGroup(labels);
-  textLabels.vulnerabilidad_vial.addTo(map);
-
-  const cb = document.getElementById('cb_vuln_text');
-  if (cb) {
-    cb.addEventListener('change', function () { controlarVisibilidadZoom(); });
-  }
-}
-
 /* ---- Cargar todas las capas ---- */
 async function cargarTodas() {
   buildUI();
@@ -606,9 +595,6 @@ async function cargarTodas() {
         const lc = document.getElementById(`lc_${c.id}`);
         if (lc) lc.textContent = `${contadores[c.id]}`;
         cargadas++;
-        if (c.id === 'vulnerabilidad_vial') {
-          crearTextLabelsVulnerabilidad(capa);
-        }
       }
     } catch (e) {
       console.error(e);
@@ -651,18 +637,21 @@ function controlarVisibilidadZoom() {
         }
       });
     }
-  }
 
-  /* Etiquetas de vulnerabilidad solo si la capa principal esta visible */
-  if (textLabels.vulnerabilidad_vial) {
-    const cbText = document.getElementById('cb_vuln_text');
-    const mainOn = map.hasLayer(capas.vulnerabilidad_vial);
-    const layerOn = map.hasLayer(textLabels.vulnerabilidad_vial);
-    const debeMostrar = z >= LABEL_ZOOM && cbText && cbText.checked && mainOn;
-    if (debeMostrar && !layerOn) {
-      textLabels.vulnerabilidad_vial.addTo(map);
-    } else if (!debeMostrar && layerOn) {
-      map.removeLayer(textLabels.vulnerabilidad_vial);
+    /* Nombres de vulnerabilidad vial: zoom + checkbox */
+    if (id === 'vulnerabilidad_vial') {
+      const cbText = document.getElementById('cb_vuln_text');
+      const layerVisible = map.hasLayer(capa);
+      const showLabels = z >= LABEL_ZOOM && cbText && cbText.checked && layerVisible;
+      capa.eachLayer(l => {
+        const nombre = l.feature?.properties?.nombre;
+        if (showLabels && nombre && !l.isTooltipOpen()) {
+          l.bindTooltip(nombre, { permanent: true, direction: 'top', offset: [0, -18], className: 'layer-tooltip' });
+          l.openTooltip();
+        } else if (!showLabels) {
+          l.unbindTooltip();
+        }
+      });
     }
   }
 }

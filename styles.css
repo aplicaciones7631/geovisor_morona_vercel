@@ -342,18 +342,6 @@ body {
   user-select: none;
 }
 
-.vuln-text-label {
-  background: rgba(255,255,255,0.88);
-  border: 1px solid #888;
-  border-radius: 3px;
-  padding: 1px 4px;
-  font-size: 10px;
-  font-family: Arial, sans-serif;
-  color: #222;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
 .layer-item input[type=checkbox] {
   width: 14px;
   height: 14px;
