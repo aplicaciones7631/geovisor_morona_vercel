@@ -628,7 +628,8 @@ function controlarVisibilidadZoom() {
         if (z >= TOOLTIP_ZOOM) {
           const props = l.feature?.properties;
           const campo = id === 'morona_poblados_2025' ? 'nombre' : 'dpa_desloc';
-          if (props?.[campo] && !l.isTooltipOpen()) {
+          const ttPob = l.getTooltip();
+          if (props?.[campo] && !(ttPob && ttPob.isOpen())) {
             l.bindTooltip(props[campo], { permanent: true, direction: 'top', offset: [0, -16], className: 'layer-tooltip' });
             l.openTooltip();
           }
@@ -646,7 +647,8 @@ function controlarVisibilidadZoom() {
       capa.eachLayer(l => {
         const nombre = l.feature?.properties?.nombre;
         if (showLabels && nombre) {
-          if (!l.isTooltipOpen()) {
+          const ttVuln = l.getTooltip();
+          if (!(ttVuln && ttVuln.isOpen())) {
             l.bindTooltip(nombre, { permanent: true, direction: 'top', offset: [0, -18], className: 'layer-tooltip vuln-tooltip' });
             l.openTooltip();
           }
