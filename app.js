@@ -133,6 +133,26 @@ let capas = {};
 let contadores = {};
 let textLabels = {};
 
+const ZOOM_THRESHOLDS = {
+  morona_canton_2025: 8,
+  morona_parroquias_2025: 8,
+  via_primaria_e45: 8,
+  via_secundaria_e46: 9,
+  areas_protegidas: 9,
+  macas_barrios_2016: 10,
+  pit_urbanos_2025: 10,
+  transp_publico_2024: 10,
+  via_terciaria_rural: 10,
+  reportes_ciudadanos: 10,
+  parada_buses: 11,
+  morona_poblados_2025: 11,
+  morona_pob_sectores_2025: 11,
+  vulnerabilidad_vial: 11
+};
+
+const TOOLTIP_ZOOM = 13;
+const LABEL_ZOOM = 13;
+
 /* ---- Eventos del mapa ---- */
 map.on('mousemove', e => {
   document.getElementById('coord-display').textContent =
@@ -302,14 +322,14 @@ function buildUI() {
   CAPAS.forEach(c => {
     document.getElementById(`cb_${c.id}`).addEventListener('change', function () {
       if (capas[c.id]) {
-        this.checked ? capas[c.id].addTo(map) : map.removeLayer(capas[c.id]);
-      }
-      if (c.id === 'vulnerabilidad_vial' && textLabels.vulnerabilidad_vial) {
-        const cbText = document.getElementById('cb_vuln_text');
-        if (this.checked && cbText && cbText.checked) {
-          textLabels.vulnerabilidad_vial.addTo(map);
+        if (this.checked) {
+          capas[c.id].addTo(map);
+          controlarVisibilidadZoom();
         } else {
-          map.removeLayer(textLabels.vulnerabilidad_vial);
+          map.removeLayer(capas[c.id]);
+          if (c.id === 'vulnerabilidad_vial' && textLabels.vulnerabilidad_vial) {
+            map.removeLayer(textLabels.vulnerabilidad_vial);
+          }
         }
       }
     });
@@ -566,8 +586,8 @@ function crearTextLabelsVulnerabilidad(capa) {
   const cb = document.getElementById('cb_vuln_text');
   if (cb) {
     cb.addEventListener('change', function () {
-      this.checked ? textLabels.vulnerabilidad_vial.addTo(map)
-        : map.removeLayer(textLabels.vulnerabilidad_vial);
+      if (this.checked) { controlarVisibilidadZoom(); }
+      else { map.removeLayer(textLabels.vulnerabilidad_vial); }
     });
   }
 }
@@ -601,6 +621,50 @@ async function cargarTodas() {
 
   document.getElementById('loading-overlay').classList.add('hidden');
   document.getElementById('layer-status').textContent = `${cargadas}/${total} capas`;
+
+  controlarVisibilidadZoom();
+  map.on('zoomend', controlarVisibilidadZoom);
+}
+
+function controlarVisibilidadZoom() {
+  const z = map.getZoom();
+
+  for (const [id, capa] of Object.entries(capas)) {
+    const minZoom = ZOOM_THRESHOLDS[id] || 0;
+    const visible = map.hasLayer(capa);
+    if (z >= minZoom && !visible) {
+      capa.addTo(map);
+    } else if (z < minZoom && visible) {
+      map.removeLayer(capa);
+    }
+
+    /* Tooltips permanentes solo a alto zoom */
+    if (id === 'morona_poblados_2025' || id === 'morona_pob_sectores_2025') {
+      capa.eachLayer(l => {
+        if (z >= TOOLTIP_ZOOM) {
+          const props = l.feature?.properties;
+          const campo = id === 'morona_poblados_2025' ? 'nombre' : 'dpa_desloc';
+          if (props?.[campo] && !l.isTooltipOpen()) {
+            l.bindTooltip(props[campo], { permanent: true, direction: 'top', offset: [0, -16], className: 'layer-tooltip' });
+            l.openTooltip();
+          }
+        } else {
+          l.unbindTooltip();
+        }
+      });
+    }
+  }
+
+  /* Etiquetas de vulnerabilidad solo a alto zoom */
+  if (textLabels.vulnerabilidad_vial) {
+    const cbText = document.getElementById('cb_vuln_text');
+    const layerOn = map.hasLayer(textLabels.vulnerabilidad_vial);
+    if (z >= LABEL_ZOOM && cbText && cbText.checked && !layerOn) {
+      textLabels.vulnerabilidad_vial.addTo(map);
+    } else if (z < LABEL_ZOOM && layerOn) {
+      map.removeLayer(textLabels.vulnerabilidad_vial);
+    }
+  }
 }
 
 /* ---- Iniciar ---- */
