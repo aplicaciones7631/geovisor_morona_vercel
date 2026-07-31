@@ -305,8 +305,10 @@ function buildUI() {
       if (c.id === 'vulnerabilidad_vial') {
         html += `
         <div class="layer-sub-item">
-          <input type="checkbox" id="cb_vuln_text" checked>
-          <span class="layer-sub-label">Mostrar nombre en mapa</span>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;width:100%">
+            <input type="checkbox" id="cb_vuln_text" checked>
+            <span class="layer-sub-label">Mostrar nombre en mapa</span>
+          </label>
         </div>`;
       }
     });
